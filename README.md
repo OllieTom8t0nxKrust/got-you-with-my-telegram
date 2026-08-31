@@ -21,17 +21,18 @@ TechCrunch wrote about the utility — [Telegram is still leaking user IP addres
 3. Run script, call and wait for an answer.
 4. Profit! You have received the IP address of the interlocutor.
 
-### Get & Run (Ubuntu 20 example)
+### Get & Run (Ubuntu 24.04 example)
 
 ```sh
 $ sudo apt update
-$ sudo apt install -y python3-pip python3-venv tshark
+$ sudo apt install -y python3 python3-pip python3-venv tshark
 $ git clone https://github.com/n0a/telegram-get-remote-ip
 $ cd telegram-get-remote-ip
 $ python3 -m venv venv
 $ source ./venv/bin/activate
-$ sudo pip3 install -r requirements.txt
-$ sudo python3 tg_get_ip.py
+$ pip install --upgrade pip
+$ pip install -r requirements.txt
+$ sudo ./venv/bin/python tg_get_ip.py
 ```
 
 Or specify the interface immediately at startup:
