@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -yq \
     python3-venv \
     git \
     tshark \
+    build-essential \
+    python3-dev \
+    libxml2-dev \
+    libxslt1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone repository and copy updated script

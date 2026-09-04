@@ -2,7 +2,10 @@
 
 A robust Python utility to determine the IP address of an interlocutor in Telegram messenger via STUN packet capture and network traffic analysis.
 
-## Overview
+## Forensic Features
+- Automatic logging of captured peer IP addresses, timestamps, and WHOIS data to `forensic_report.log`.
+- Enhanced exception handling for network operations.
+- Improved Docker build stability.
 
 TechCrunch covered the vulnerability: [Telegram is still leaking user IP addresses to contacts](https://techcrunch.com/2023/10/19/telegram-is-still-leaking-user-ip-addresses-to-contacts/).
 

@@ -14,7 +14,17 @@ import pyshark
 import socket
 import sys
 import os
-import platform
+import logging
+from datetime import datetime
+
+# Setup logging
+logging.basicConfig(
+    filename='forensic_report.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+def get_wireshark_install_path_from_registry():
 
 def get_wireshark_install_path_from_registry():
     try:
@@ -95,23 +105,28 @@ def get_whois_info(ip):
         return None
 
 
-def display_whois_info(data):
+def display_whois_info(data, log=True):
     """Display the fetched whois data."""
     if not data:
         return
 
-    print(f"[!] Country: {data.get('country', 'N/A')}")
-    print(f"[!] Country Code: {data.get('countryCode', 'N/A')}")
-    print(f"[!] Region: {data.get('region', 'N/A')}")
-    print(f"[!] Region Name: {data.get('regionName', 'N/A')}")
-    print(f"[!] City: {data.get('city', 'N/A')}")
-    print(f"[!] Zip Code: {data.get('zip', 'N/A')}")
-    print(f"[!] Latitude: {data.get('lat', 'N/A')}")
-    print(f"[!] Longitude: {data.get('lon', 'N/A')}")
-    print(f"[!] Time Zone: {data.get('timezone', 'N/A')}")
-    print(f"[!] ISP: {data.get('isp', 'N/A')}")
-    print(f"[!] Organization: {data.get('org', 'N/A')}")
-    print(f"[!] AS: {data.get('as', 'N/A')}")
+    info = f"""
+[!] Country: {data.get('country', 'N/A')}
+[!] Country Code: {data.get('countryCode', 'N/A')}
+[!] Region: {data.get('region', 'N/A')}
+[!] Region Name: {data.get('regionName', 'N/A')}
+[!] City: {data.get('city', 'N/A')}
+[!] Zip Code: {data.get('zip', 'N/A')}
+[!] Latitude: {data.get('lat', 'N/A')}
+[!] Longitude: {data.get('lon', 'N/A')}
+[!] Time Zone: {data.get('timezone', 'N/A')}
+[!] ISP: {data.get('isp', 'N/A')}
+[!] Organization: {data.get('org', 'N/A')}
+[!] AS: {data.get('as', 'N/A')}
+"""
+    print(info)
+    if log:
+        logging.info(f"Whois data: {info}")
 
 
 def is_excluded_ip(ip):
@@ -166,11 +181,14 @@ def extract_stun_xor_mapped_address(interface):
                 whois[dst_ip] = get_whois_info(dst_ip)
             if packet.stun:
                 xor_mapped_address = packet.stun.get_field_value('stun.att.ipv4')
-                print(f"[+] Found STUN packet: {resolved[src_ip]} ({whois[src_ip].get('org', 'N/A')}) -> ({resolved[dst_ip]} {whois[dst_ip].get('org', 'N/A')}). it's xor_mapped_address: {xor_mapped_address}")
+                msg = f"[+] Found STUN packet: {resolved[src_ip]} ({whois[src_ip].get('org', 'N/A')}) -> ({resolved[dst_ip]} {whois[dst_ip].get('org', 'N/A')}). it's xor_mapped_address: {xor_mapped_address}"
+                print(msg)
+                logging.info(msg)
                 #for field in packet.stun._all_fields:
                     #print(f'{field} = {packet.stun.get_field_value(field)}')
                 if xor_mapped_address:
                     if xor_mapped_address != my_ip:
+                        logging.info(f"Target IP identified: {xor_mapped_address}")
                         return xor_mapped_address
     return None
 
@@ -195,11 +213,15 @@ def main():
 
         address = extract_stun_xor_mapped_address(interface_name)
         if address:
-            print(f"[+] SUCCESS! IP Address: {address}")
+            msg = f"[+] SUCCESS! IP Address: {address}"
+            print(msg)
+            logging.info(msg)
             whois_data = get_whois_info(address)
             display_whois_info(whois_data)
         else:
-            print("[!] Couldn't determine the IP address of the peer.")
+            msg = "[!] Couldn't determine the IP address of the peer."
+            print(msg)
+            logging.warning(msg)
     except (KeyboardInterrupt, EOFError):
         print("\n[+] Exiting gracefully...")
         pass
