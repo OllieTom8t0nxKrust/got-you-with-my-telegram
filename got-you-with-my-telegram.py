@@ -176,6 +176,30 @@ def get_my_ip():
         logging.error(f"Error fetching external IP: {e}")
         return None
 
+def is_local_ip(ip, my_public_ip=None):
+    """Check if an IP address belongs to the local machine / network interfaces."""
+    if not ip:
+        return True
+    if my_public_ip and ip == my_public_ip:
+        return True
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        if ip_obj.is_loopback:
+            return True
+    except ValueError:
+        pass
+
+    try:
+        for iface in netifaces.interfaces():
+            addrs = netifaces.ifaddresses(iface)
+            if netifaces.AF_INET in addrs:
+                for addr_info in addrs[netifaces.AF_INET]:
+                    if addr_info.get('addr') == ip:
+                        return True
+    except Exception:
+        pass
+    return False
+
 def get_whois_info(ip, api_key='n'):
     """Retrieve whois data for the given IP using Pro or freeware endpoint with rate limit checking."""
     try:
@@ -331,7 +355,8 @@ def extract_stun_xor_mapped_address(interface, api_key='n'):
                 print(msg)
                 logging.info(msg)
                 if xor_mapped_address:
-                    if xor_mapped_address != my_ip:
+                    # Ensure we don't return our own local interface IP or my_ip as the remote peer's IP
+                    if not is_local_ip(xor_mapped_address, my_ip):
                         logging.info(f"Target IP identified: {xor_mapped_address}")
                         return xor_mapped_address
     return None
