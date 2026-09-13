@@ -14,6 +14,7 @@ import pyshark
 import socket
 import sys
 import os
+import json
 import logging
 import asyncio
 if not hasattr(asyncio, 'SafeChildWatcher'):
@@ -39,6 +40,71 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+CONFIG_FILE = 'config.json'
+
+def load_config():
+    if os.path.isfile(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_config(config):
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=4)
+    except Exception as e:
+        print(f"[!] Error saving config: {e}")
+
+def validate_ip_api_key(api_key):
+    """Validate IP-API Pro API key."""
+    try:
+        response = requests.get(f"https://pro.ip-api.com/json/8.8.8.8?key={api_key}", timeout=5)
+        data = response.json()
+        if data.get('status') == 'success':
+            return True
+        print(f"[!] API Key validation failed: {data.get('message', 'Unknown error')}")
+        return False
+    except Exception as e:
+        print(f"[!] Validation connection error: {e}")
+        return False
+
+def configure_api_keys():
+    """Prompt user for optional API keys with yes/no validation before packet capture."""
+    config = load_config()
+    if 'ip_api' in config:
+        print(f"[+] Loaded saved API key configuration.")
+        return config
+
+    print("\n[+] --- API Key Configuration ---")
+    print("[+] Note: This tool works without API keys using free public endpoints.")
+    
+    choice = input("[?] Do you want to use an IP-API Pro API key? (yes/no): ").strip().lower()
+    if choice in ['y', 'yes']:
+        while True:
+            key = input("[+] Enter your IP-API Pro API Key: ").strip()
+            if key:
+                print("[+] Validating API key on first run...")
+                if validate_ip_api_key(key):
+                    print("[+] API Key validated successfully!")
+                    config['ip_api'] = key
+                    break
+                else:
+                    retry = input("[?] Validation failed. Try again? (yes/no): ").strip().lower()
+                    if retry not in ['y', 'yes']:
+                        config['ip_api'] = 'n'
+                        break
+            else:
+                config['ip_api'] = 'n'
+                break
+    else:
+        config['ip_api'] = 'n'.lower()
+
+    save_config(config)
+    return config
 
 def get_wireshark_install_path_from_registry():
     try:
@@ -108,10 +174,15 @@ def get_my_ip():
         logging.error(f"Error fetching external IP: {e}")
         return None
 
-def get_whois_info(ip):
+def get_whois_info(ip, api_key='n'):
     """Retrieve whois data for the given IP."""
     try:
-        response = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
+        if api_key and api_key != 'n':
+            url = f"https://pro.ip-api.com/json/{ip}?key={api_key}"
+        else:
+            url = f"http://ip-api.com/json/{ip}"
+
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
 
@@ -179,7 +250,7 @@ def choose_interface():
     return interfaces[choice - 1]
 
 
-def extract_stun_xor_mapped_address(interface):
+def extract_stun_xor_mapped_address(interface, api_key='n'):
     """Capture packets and extract the IP address from STUN protocol."""
     print("[+] Capturing traffic, please wait...")
     try:
@@ -213,9 +284,9 @@ def extract_stun_xor_mapped_address(interface):
             if dst_ip not in resolved:
                 resolved[dst_ip] = f"{dst_ip}({get_hostname(dst_ip)})"
             if src_ip not in whois:
-                whois[src_ip] = get_whois_info(src_ip)
+                whois[src_ip] = get_whois_info(src_ip, api_key)
             if dst_ip not in whois:
-                whois[dst_ip] = get_whois_info(dst_ip)
+                whois[dst_ip] = get_whois_info(dst_ip, api_key)
             if hasattr(packet, 'stun') and packet.stun:
                 xor_mapped_address = packet.stun.get_field_value('stun.att.ipv4')
                 org_src = whois[src_ip].get('org', 'N/A') if whois.get(src_ip) else 'N/A'
@@ -243,17 +314,20 @@ def main():
         check_tshark_availability()
         args = parse_arguments()
 
+        # Ask for API keys before starting execution of packet capturer
+        api_config = configure_api_keys()
+
         if args.interface:
             interface_name = args.interface
         else:
             interface_name = choose_interface()
 
-        address = extract_stun_xor_mapped_address(interface_name)
+        address = extract_stun_xor_mapped_address(interface_name, api_config.get('ip_api', 'n'))
         if address:
             msg = f"[+] SUCCESS! IP Address: {address}"
             print(msg)
             logging.info(msg)
-            whois_data = get_whois_info(address)
+            whois_data = get_whois_info(address, api_config.get('ip_api', 'n'))
             display_whois_info(whois_data)
         else:
             msg = "[!] Couldn't determine the IP address of the peer."
