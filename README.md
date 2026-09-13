@@ -32,7 +32,7 @@ python3 -m venv venv
 source ./venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-sudo ./venv/bin/python tg_get_ip.py
+sudo ./venv/bin/python got-you-with-my-telegram.py
 ```
 
 ### Docker Setup

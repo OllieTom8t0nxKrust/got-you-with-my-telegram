@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -yq \
 
 # Clone repository and copy updated script
 RUN git clone https://github.com/n0a/telegram-get-remote-ip
-COPY ./tg_get_ip.py ./telegram-get-remote-ip/tg_get_ip.py
+COPY ./got-you-with-my-telegram.py ./telegram-get-remote-ip/got-you-with-my-telegram.py
 COPY ./requirements.txt ./telegram-get-remote-ip/requirements.txt
 
 # Create virtual environment, upgrade pip, and install updated requirements
@@ -32,4 +32,4 @@ RUN cd telegram-get-remote-ip \
 WORKDIR /telegram-get-remote-ip
 
 # Default command using virtual environment python
-CMD ["./venv/bin/python3", "tg_get_ip.py"]
+CMD ["./venv/bin/python3", "got-you-with-my-telegram.py"]
