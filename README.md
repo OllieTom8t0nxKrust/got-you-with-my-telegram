@@ -35,6 +35,12 @@ pip install -r requirements.txt
 sudo ./venv/bin/python got-you-with-my-telegram.py
 ```
 
+### Usage Instructions
+1. Run the script with `sudo` privileges (`sudo ./venv/bin/python got-you-with-my-telegram.py`) since packet capture requires root access.
+2. Select your active network interface (e.g. `wlan0` or `enp8s0`).
+3. Open Telegram and initiate a direct voice or video call with your contact (both users must be in each other's contacts).
+4. Once the P2P STUN connection is established, the peer's IP address and WHOIS details will be displayed and logged to `forensic_report.log`.
+
 ### Docker Setup
 
 ```sh

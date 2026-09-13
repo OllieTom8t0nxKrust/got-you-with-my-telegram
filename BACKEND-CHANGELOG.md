@@ -2,6 +2,17 @@
 
 All core script, packet capture, networking, and containerization changes.
 
+## [1.2.0] - 2026-09-13
+
+### Added
+- Comprehensive unit test suite (`tests/test_got_you_with_my_telegram.py`) covering IP validation, host resolution, external IP fetching, and WHOIS lookup with mocking.
+- Compatibility fallback for Python 3.12+ / 3.14 missing `asyncio.get_child_watcher`.
+- Root privilege check and clean exception handling for `tshark` packet capture initialization.
+
+### Changed
+- Standardized and renamed main executable script to `got-you-with-my-telegram.py`.
+- Updated `Dockerfile` and `README.md` to reference `got-you-with-my-telegram.py` and added clear usage guidelines for capturing Telegram P2P calls with `sudo`.
+
 ## [1.1.0] - 2026-08-31
 
 ### Added

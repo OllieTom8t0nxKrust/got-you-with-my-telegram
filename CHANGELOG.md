@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-09-13
+
+### Added
+- Added comprehensive unit test suite in `tests/`.
+- Added Python 3.12+ / 3.14 asyncio compatibility fix.
+
+### Changed
+- Renamed script to `got-you-with-my-telegram.py` across project files, Dockerfile, and README.
+- Enhanced root privilege checks and documentation for Telegram P2P call packet capture usage.
+
 ## [1.1.0] - 2026-08-31
 
 ### Added
