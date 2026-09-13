@@ -22,6 +22,37 @@ class TestGotYouWithMyTelegram(unittest.TestCase):
         # Invalid IP
         self.assertTrue(got_you_with_my_telegram.is_excluded_ip("invalid-ip"))
 
+    def test_is_local_ip(self):
+        self.assertTrue(got_you_with_my_telegram.is_local_ip("127.0.0.1"))
+        self.assertTrue(got_you_with_my_telegram.is_local_ip("203.0.113.1", my_public_ip="203.0.113.1"))
+        self.assertFalse(got_you_with_my_telegram.is_local_ip("8.8.8.8", my_public_ip="203.0.113.1"))
+
+    def test_extract_telegram_geolocation_metadata(self):
+        packet = MagicMock()
+        packet.length = "150"
+        meta = got_you_with_my_telegram.extract_telegram_geolocation_metadata(packet)
+        self.assertIsNotNone(meta)
+        self.assertEqual(meta["packet_size"], 150)
+
+        packet.length = "50"
+        meta_none = got_you_with_my_telegram.extract_telegram_geolocation_metadata(packet)
+        self.assertIsNone(meta_none)
+
+    @patch('got_you_with_my_telegram.subprocess.Popen')
+    def test_perform_traceroute(self, mock_popen):
+        mock_process = MagicMock()
+        mock_process.stdout = [" 1  192.168.1.1  1ms\n"]
+        mock_process.wait.return_value = 0
+        mock_popen.return_value = mock_process
+
+        got_you_with_my_telegram.perform_traceroute("8.8.8.8")
+        mock_popen.assert_called_once()
+
+    @patch('builtins.input', return_value='2')
+    def test_show_operational_menu(self, mock_input):
+        mode = got_you_with_my_telegram.show_operational_menu()
+        self.assertEqual(mode, 2)
+
     @patch('got_you_with_my_telegram.socket.gethostbyaddr')
     def test_get_hostname(self, mock_gethostbyaddr):
         mock_gethostbyaddr.return_value = ("example.com", [], [])

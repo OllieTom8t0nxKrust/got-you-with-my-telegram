@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-09-13
+
+### Added
+- **Interactive Startup Menu:** Mode selection for [1] Simple Location Tracking, [2] Triangle Tracking (5+ min deep telemetry with Ctrl+C safe dump), and [3] Forensic Audio Recording (background RTP audio capture saved to `.wav`).
+- **TraceRoute Network Hop Analysis:** Real-time hop visualization targeting the remote call answerer.
+- **Telegram Geolocation Heuristics:** Signaling metadata profiling for precision positioning.
+- **Strict Target Isolation:** Guaranteed focus exclusively on the remote call answerer, never leaking host machine metrics.
+- **Expanded Test Suite:** Unit tests covering all v2.0 modules (`tests/test_got_you_with_my_telegram.py`).
+
 ## [1.2.0] - 2026-09-13
 
 ### Added

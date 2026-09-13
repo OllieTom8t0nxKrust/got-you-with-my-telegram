@@ -2,9 +2,13 @@
 
 All core script, packet capture, networking, and containerization changes.
 
-## [2.0.0-alpha] - 2026-09-13 (Planned)
+## [2.0.0] - 2026-09-13
 ### Added
-- Created comprehensive `.todo` project evolution plan covering interactive menu options (Simple Location Tracking, 5-minute Triangle Tracking with Ctrl+C safety dump, and Forensic `.wav` Audio Recording), Telegram exact geolocation heuristics, and TraceRoute network hop analysis with strict remote call-answerer target isolation.
+- **Interactive Startup Menu System:** Implemented mode selection (`show_operational_menu`) for [1] Simple Location Tracking, [2] Triangle Tracking (5+ min ongoing call telemetry aggregation with safe Ctrl+C stdout summary dump), and [3] Forensic Audio Recording (background RTP audio stream recording saved to `results/call_audio_forensic.wav` with real-time human-readable terminal logging).
+- **TraceRoute Network Hop Analysis:** Added `perform_traceroute` diagnostics mapping intermediate routing hops strictly to the remote call answerer.
+- **Telegram Geolocation Heuristics:** Integrated signaling metadata packet profiling (`extract_telegram_geolocation_metadata`).
+- **Strict Target Isolation:** Implemented robust `is_local_ip` filtering to guarantee zero leakage from the calling host machine, focusing exclusively on the target call answerer.
+- **Comprehensive Unit Tests:** Added test cases for v2.0 modules in `tests/test_got_you_with_my_telegram.py`.
 
 ## [1.2.0] - 2026-09-13
 

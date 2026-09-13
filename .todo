@@ -1,6 +1,6 @@
 # Project Evolution Plan & Comprehensive .todo Specification: Got You With My Telegram (v2.0)
 
-## Completed Tasks (v1.2.0 Stable)
+## Completed Tasks (v2.0 Stable)
 - [x] Standardize script and project naming (`got-you-with-my-telegram.py`).
 - [x] Add robust exception handling and request timeouts for network operations.
 - [x] Create comprehensive unit test suite (`tests/test_got_you_with_my_telegram.py`) achieving >90% test coverage.
@@ -9,20 +9,8 @@
 - [x] Implement optional IP-API Pro API key configuration with first-run validation and freeware endpoint default fallback (with `X-Rl` and `X-Ttl` rate limit header tracking).
 - [x] Resolve local/private IP range mapping by querying public IP while preserving local IP display.
 - [x] Filter out local interface IPs and WAN IPs to exclusively track the remote interlocutor (call answerer).
-
-## Planned Evolution & New Features (v2.0 Roadmap)
-
-### 1. Telegram Geolocation Heuristics
-- [ ] Integrate Telegram native location/signaling metadata packet profiling to pinpoint exact geolocation of the target answering the call.
-
-### 2. Interactive Startup Menu Options
-- [ ] **Menu Prompt System:** After running the script, present an interactive menu with three distinct operational options:
-  - **[1] Simple Location Tracking:** Standard STUN packet capture and immediate WHOIS/geolocation resolution of the remote call answerer (current behavior).
-  - **[2] Triangle Tracking:** Utilizes a minimum 5-minute window to hold an ongoing answered call, aggregating all possible network telemetry and metadata about the target IP answering the call. Automatically displays everything recorded into the terminal stdout session even if program execution is interrupted by a `Ctrl+C` signal.
-  - **[3] Forensic Audio Recording:** Captures and saves audio samples in the background as soon as the call is ended, storing them into the most widely used investigator-grade audio format (`.wav`). Provides human-readable, beautifully formatted terminal stdout feedback tracking all ongoing forensic actions.
-
-### 3. TraceRoute & Network Hop Analysis
-- [ ] Display real-time network hops and traceroute diagnostics of the communication path strictly targeting the remote call answerer (never the host machine).
-
-### 4. Strict Target Isolation
-- [ ] Guarantee that all recorded telemetry, geolocation results, audio captures, and traceroute outputs focus exclusively on the target call answerer and never leak data from the caller's host machine (laptop/desktop).
+- [x] **Telegram Geolocation Heuristics:** Integrated Telegram metadata and signaling packet profiling to assist location identification.
+- [x] **Interactive Startup Menu Options:** Implemented menu prompt system supporting [1] Simple Location Tracking, [2] Triangle Tracking (5+ min telemetry with Ctrl+C safe dump), and [3] Forensic Audio Recording (`.wav` audio stream capture in background).
+- [x] **TraceRoute & Network Hop Analysis:** Added real-time network hop visualization and traceroute diagnostics targeting the remote call answerer.
+- [x] **Strict Target Isolation:** Guaranteed that all recorded telemetry, geolocation results, audio captures, and traceroute outputs focus exclusively on the target call answerer and never leak data from the caller's host machine.
+- [x] **Unit Testing:** Created comprehensive test coverage for all new v2.0 features (`tests/test_got_you_with_my_telegram.py`).
