@@ -13,6 +13,7 @@ All core script, packet capture, networking, and containerization changes.
 ### Changed
 - Standardized and renamed main executable script to `got-you-with-my-telegram.py`.
 - Updated `Dockerfile` and `README.md` to reference `got-you-with-my-telegram.py` and added clear usage guidelines for capturing Telegram P2P calls with `sudo`.
+- Enhanced IP-API querying to automatically fallback to public IP resolution when local/private range IPs are encountered, displaying the public IP above the local STUN IP result.
 
 ## [1.1.0] - 2026-08-31
 

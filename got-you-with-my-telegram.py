@@ -205,7 +205,9 @@ def get_whois_info(ip, api_key='n'):
         data = response.json()
 
         if data.get('status') == 'fail':
-            print(f"[!] IP-API query failed: {data.get('message', 'Unknown error')}")
+            # Suppress noisy private/reserved range error prints during intermediate packet scanning
+            if data.get('message') not in ['private range', 'reserved range']:
+                print(f"[!] IP-API query failed: {data.get('message', 'Unknown error')}")
             return None
 
         # Get the hostname using the socket library
@@ -305,10 +307,22 @@ def extract_stun_xor_mapped_address(interface, api_key='n'):
                 resolved[src_ip] = f"{src_ip}({get_hostname(src_ip)})"
             if dst_ip not in resolved:
                 resolved[dst_ip] = f"{dst_ip}({get_hostname(dst_ip)})"
+            
+            # Helper to get query IP for whois (resolve private/reserved IPs to public IP)
+            def get_query_ip(ip):
+                try:
+                    obj = ipaddress.ip_address(ip)
+                    if obj.is_private or obj.is_reserved or obj.is_loopback:
+                        return my_ip if my_ip else ip
+                except ValueError:
+                    pass
+                return ip
+
             if src_ip not in whois:
-                whois[src_ip] = get_whois_info(src_ip, api_key)
+                whois[src_ip] = get_whois_info(get_query_ip(src_ip), api_key)
             if dst_ip not in whois:
-                whois[dst_ip] = get_whois_info(dst_ip, api_key)
+                whois[dst_ip] = get_whois_info(get_query_ip(dst_ip), api_key)
+
             if hasattr(packet, 'stun') and packet.stun:
                 xor_mapped_address = packet.stun.get_field_value('stun.att.ipv4')
                 org_src = whois[src_ip].get('org', 'N/A') if whois.get(src_ip) else 'N/A'
@@ -346,10 +360,25 @@ def main():
 
         address = extract_stun_xor_mapped_address(interface_name, api_config.get('ip_api', 'n'))
         if address:
+            # Check if address is private/reserved and get public IP for querying ip-api
+            query_ip = address
+            public_ip = None
+            try:
+                ip_obj = ipaddress.ip_address(address)
+                if ip_obj.is_private or ip_obj.is_reserved or ip_obj.is_loopback:
+                    public_ip = get_my_ip()
+                    if public_ip:
+                        query_ip = public_ip
+            except ValueError:
+                pass
+
+            if public_ip:
+                print(f"[+] Public IP: {public_ip}")
             msg = f"[+] SUCCESS! IP Address: {address}"
             print(msg)
             logging.info(msg)
-            whois_data = get_whois_info(address, api_config.get('ip_api', 'n'))
+
+            whois_data = get_whois_info(query_ip, api_config.get('ip_api', 'n'))
             display_whois_info(whois_data)
         else:
             msg = "[!] Couldn't determine the IP address of the peer."

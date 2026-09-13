@@ -5,3 +5,4 @@ venv
 __pycache__/
 forensic_report.log
 results
+config.json
