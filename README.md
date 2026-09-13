@@ -49,6 +49,13 @@ docker build ./ -t telegram-get-remote-ip
 docker run -it --cap-add=NET_RAW --cap-add=NET_ADMIN telegram-get-remote-ip
 ```
 
+## Evolution Roadmap (v2.0 .todo)
+The project evolution plan is tracked in `.todo` and includes:
+- Interactive Menu System (Simple Location Tracking, Triangle Tracking for 5+ min deep telemetry with Ctrl+C dump, and Forensic Audio Recording to `.wav`).
+- Telegram Geolocation integration for exact positioning.
+- Network traceroute and hop visualization strictly targeting the remote call answerer.
+- Guaranteed target isolation (focusing exclusively on the call answerer, never the host machine).
+
 ## Credits
 
 - Original creator: [n0a](https://github.com/n0a)

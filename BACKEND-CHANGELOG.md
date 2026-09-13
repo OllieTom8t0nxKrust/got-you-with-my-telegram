@@ -2,6 +2,10 @@
 
 All core script, packet capture, networking, and containerization changes.
 
+## [2.0.0-alpha] - 2026-09-13 (Planned)
+### Added
+- Created comprehensive `.todo` project evolution plan covering interactive menu options (Simple Location Tracking, 5-minute Triangle Tracking with Ctrl+C safety dump, and Forensic `.wav` Audio Recording), Telegram exact geolocation heuristics, and TraceRoute network hop analysis with strict remote call-answerer target isolation.
+
 ## [1.2.0] - 2026-09-13
 
 ### Added
