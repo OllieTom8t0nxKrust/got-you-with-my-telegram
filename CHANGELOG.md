@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added comprehensive unit test suite in `tests/`.
 - Added Python 3.12+ / 3.14 asyncio compatibility fix.
+- Added optional IP-API Pro API key configuration and first-run validation.
 
 ### Changed
 - Renamed script to `got-you-with-my-telegram.py` across project files, Dockerfile, and README.
