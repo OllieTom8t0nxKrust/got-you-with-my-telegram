@@ -73,14 +73,15 @@ def validate_ip_api_key(api_key):
         return False
 
 def configure_api_keys():
-    """Prompt user for optional API keys with yes/no validation before packet capture."""
+    """Prompt user for optional API keys with yes/no validation before packet capture.
+       If user enters 'n' or declines, freeware method is used as the default solution."""
     config = load_config()
     if 'ip_api' in config:
         print(f"[+] Loaded saved API key configuration.")
         return config
 
     print("\n[+] --- API Key Configuration ---")
-    print("[+] Note: This tool works without API keys using free public endpoints.")
+    print("[+] Note: Free freeware method will be used by default if no API key is provided.")
     
     choice = input("[?] Do you want to use an IP-API Pro API key? (yes/no): ").strip().lower()
     if choice in ['y', 'yes']:
@@ -101,6 +102,7 @@ def configure_api_keys():
                 config['ip_api'] = 'n'
                 break
     else:
+        # User entered 'n' (or anything else), set as lowercase 'n'
         config['ip_api'] = 'n'.lower()
 
     save_config(config)
@@ -175,16 +177,36 @@ def get_my_ip():
         return None
 
 def get_whois_info(ip, api_key='n'):
-    """Retrieve whois data for the given IP."""
+    """Retrieve whois data for the given IP using Pro or freeware endpoint with rate limit checking."""
     try:
         if api_key and api_key != 'n':
             url = f"https://pro.ip-api.com/json/{ip}?key={api_key}"
         else:
-            url = f"http://ip-api.com/json/{ip}"
+            # Freeware endpoint with optimized fields as per documentation
+            url = f"http://ip-api.com/json/{ip}?fields=status,message,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
 
         response = requests.get(url, timeout=5)
+
+        # Check rate limit headers for freeware endpoint (X-Rl and X-Ttl)
+        if not (api_key and api_key != 'n'):
+            x_rl = response.headers.get('X-Rl')
+            x_ttl = response.headers.get('X-Ttl')
+            if x_rl is not None:
+                try:
+                    remaining = int(x_rl)
+                    if remaining == 0 and x_ttl is not None:
+                        ttl = int(x_ttl)
+                        print(f"[!] Freeware rate limit reached (45 req/min). Throttled for {ttl} seconds.")
+                        logging.warning(f"IP-API freeware rate limit reached. Throttled for {ttl}s.")
+                except ValueError:
+                    pass
+
         response.raise_for_status()
         data = response.json()
+
+        if data.get('status') == 'fail':
+            print(f"[!] IP-API query failed: {data.get('message', 'Unknown error')}")
+            return None
 
         # Get the hostname using the socket library
         hostname = get_hostname(ip)

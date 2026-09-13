@@ -45,18 +45,48 @@ class TestGotYouWithMyTelegram(unittest.TestCase):
 
     @patch('got_you_with_my_telegram.requests.get')
     @patch('got_you_with_my_telegram.get_hostname')
-    def test_get_whois_info(self, mock_get_hostname, mock_requests_get):
+    def test_get_whois_info_freeware(self, mock_get_hostname, mock_requests_get):
         mock_response = MagicMock()
-        mock_response.json.return_value = {"country": "United States", "countryCode": "US", "org": "Google"}
+        mock_response.headers = {'X-Rl': '44', 'X-Ttl': '60'}
+        mock_response.json.return_value = {"status": "success", "country": "Canada", "org": "Videotron"}
+        mock_requests_get.return_value = mock_response
+        mock_get_hostname.return_value = "videotron.ca"
+
+        data = got_you_with_my_telegram.get_whois_info("24.48.0.1", api_key='n')
+        self.assertEqual(data["country"], "Canada")
+        self.assertEqual(data["org"], "Videotron")
+
+    @patch('got_you_with_my_telegram.requests.get')
+    @patch('got_you_with_my_telegram.get_hostname')
+    def test_get_whois_info_freeware_rate_limit(self, mock_get_hostname, mock_requests_get):
+        mock_response = MagicMock()
+        mock_response.headers = {'X-Rl': '0', 'X-Ttl': '30'}
+        mock_response.json.return_value = {"status": "fail", "message": "rate limit exceeded"}
+        mock_requests_get.return_value = mock_response
+
+        data = got_you_with_my_telegram.get_whois_info("8.8.8.8", api_key='n')
+        self.assertIsNone(data)
+
+    @patch('got_you_with_my_telegram.requests.get')
+    @patch('got_you_with_my_telegram.get_hostname')
+    def test_get_whois_info_pro(self, mock_get_hostname, mock_requests_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"status": "success", "country": "United States", "org": "Google"}
         mock_requests_get.return_value = mock_response
         mock_get_hostname.return_value = "dns.google"
 
-        data = got_you_with_my_telegram.get_whois_info("8.8.8.8")
+        data = got_you_with_my_telegram.get_whois_info("8.8.8.8", api_key="test-pro-key")
         self.assertEqual(data["country"], "United States")
-        self.assertEqual(data["org"], "Google")
 
         mock_requests_get.side_effect = Exception("API error")
-        self.assertIsNone(got_you_with_my_telegram.get_whois_info("8.8.8.8"))
+        self.assertIsNone(got_you_with_my_telegram.get_whois_info("8.8.8.8", api_key="test-pro-key"))
+
+    @patch('builtins.input', return_value='n')
+    @patch('got_you_with_my_telegram.load_config', return_value={})
+    @patch('got_you_with_my_telegram.save_config')
+    def test_configure_api_keys_decline(self, mock_save, mock_load, mock_input):
+        config = got_you_with_my_telegram.configure_api_keys()
+        self.assertEqual(config['ip_api'], 'n')
 
 if __name__ == '__main__':
     unittest.main()

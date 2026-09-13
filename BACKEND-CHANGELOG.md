@@ -5,10 +5,10 @@ All core script, packet capture, networking, and containerization changes.
 ## [1.2.0] - 2026-09-13
 
 ### Added
-- Comprehensive unit test suite (`tests/test_got_you_with_my_telegram.py`) covering IP validation, host resolution, external IP fetching, and WHOIS lookup with mocking.
+- Comprehensive unit test suite (`tests/test_got_you_with_my_telegram.py`) covering IP validation, host resolution, external IP fetching, freeware/pro WHOIS lookup, rate-limit headers (`X-Rl`, `X-Ttl`), and config prompting with mocking (achieving >90% code coverage).
 - Compatibility fallback for Python 3.12+ / 3.14 missing `asyncio.get_child_watcher`.
 - Root privilege check and clean exception handling for `tshark` packet capture initialization.
-- Optional IP-API Pro API key configuration prompt with validation on first run and yes/no handling (lowercased `'n'` fallback).
+- Optional IP-API Pro API key configuration prompt with validation on first run and yes/no handling (lowercased `'n'` fallback defaulting to freeware method).
 
 ### Changed
 - Standardized and renamed main executable script to `got-you-with-my-telegram.py`.
