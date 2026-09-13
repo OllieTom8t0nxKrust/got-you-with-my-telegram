@@ -15,6 +15,15 @@ import socket
 import sys
 import os
 import logging
+import asyncio
+if not hasattr(asyncio, 'SafeChildWatcher'):
+    class SafeChildWatcher:
+        pass
+    asyncio.SafeChildWatcher = SafeChildWatcher
+if not hasattr(asyncio, 'set_child_watcher'):
+    def set_child_watcher(watcher):
+        pass
+    asyncio.set_child_watcher = set_child_watcher
 from datetime import datetime
 
 # Setup logging
@@ -23,8 +32,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
-def get_wireshark_install_path_from_registry():
 
 def get_wireshark_install_path_from_registry():
     try:
@@ -77,21 +84,25 @@ def get_hostname(ip):
     """Retrieve hostname for the given IP."""
     try:
         return socket.gethostbyaddr(ip)[0]
-    except socket.herror:
+    except (socket.herror, socket.gaierror, socket.timeout):
         return None
 
 def get_my_ip():
     """Retrieve the external IP address."""
     try:
-        return requests.get('https://icanhazip.com').text.strip()
+        response = requests.get('https://icanhazip.com', timeout=5)
+        response.raise_for_status()
+        return response.text.strip()
     except Exception as e:
         print(f"[!] Error fetching external IP: {e}")
+        logging.error(f"Error fetching external IP: {e}")
         return None
 
 def get_whois_info(ip):
     """Retrieve whois data for the given IP."""
     try:
-        response = requests.get(f"http://ip-api.com/json/{ip}")
+        response = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
+        response.raise_for_status()
         data = response.json()
 
         # Get the hostname using the socket library
@@ -102,6 +113,7 @@ def get_whois_info(ip):
         return data
     except Exception as e:
         print(f"[!] Error fetching whois data: {e}")
+        logging.error(f"Error fetching whois data for {ip}: {e}")
         return None
 
 
@@ -131,10 +143,14 @@ def display_whois_info(data, log=True):
 
 def is_excluded_ip(ip):
     """Check if IP is in the excluded list."""
-    for network in EXCLUDED_NETWORKS:
-        if ipaddress.ip_address(ip) in ipaddress.ip_network(network):
-            return True
-    return False
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        for network in EXCLUDED_NETWORKS:
+            if ip_obj in ipaddress.ip_network(network):
+                return True
+        return False
+    except ValueError:
+        return True
 
 
 def choose_interface():
@@ -156,6 +172,11 @@ def choose_interface():
 def extract_stun_xor_mapped_address(interface):
     """Capture packets and extract the IP address from STUN protocol."""
     print("[+] Capturing traffic, please wait...")
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
     if platform.system() == "Windows":
         interface = "\\Device\\NPF_"+interface
     cap = pyshark.LiveCapture(interface=interface, display_filter="stun")
@@ -179,13 +200,13 @@ def extract_stun_xor_mapped_address(interface):
                 whois[src_ip] = get_whois_info(src_ip)
             if dst_ip not in whois:
                 whois[dst_ip] = get_whois_info(dst_ip)
-            if packet.stun:
+            if hasattr(packet, 'stun') and packet.stun:
                 xor_mapped_address = packet.stun.get_field_value('stun.att.ipv4')
-                msg = f"[+] Found STUN packet: {resolved[src_ip]} ({whois[src_ip].get('org', 'N/A')}) -> ({resolved[dst_ip]} {whois[dst_ip].get('org', 'N/A')}). it's xor_mapped_address: {xor_mapped_address}"
+                org_src = whois[src_ip].get('org', 'N/A') if whois.get(src_ip) else 'N/A'
+                org_dst = whois[dst_ip].get('org', 'N/A') if whois.get(dst_ip) else 'N/A'
+                msg = f"[+] Found STUN packet: {resolved[src_ip]} ({org_src}) -> ({resolved[dst_ip]} {org_dst}). it's xor_mapped_address: {xor_mapped_address}"
                 print(msg)
                 logging.info(msg)
-                #for field in packet.stun._all_fields:
-                    #print(f'{field} = {packet.stun.get_field_value(field)}')
                 if xor_mapped_address:
                     if xor_mapped_address != my_ip:
                         logging.info(f"Target IP identified: {xor_mapped_address}")
