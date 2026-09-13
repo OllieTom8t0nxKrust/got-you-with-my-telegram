@@ -24,6 +24,13 @@ if not hasattr(asyncio, 'set_child_watcher'):
     def set_child_watcher(watcher):
         pass
     asyncio.set_child_watcher = set_child_watcher
+if not hasattr(asyncio, 'get_child_watcher'):
+    class DummyWatcher:
+        def attach_loop(self, loop):
+            pass
+    def get_child_watcher():
+        return DummyWatcher()
+    asyncio.get_child_watcher = get_child_watcher
 from datetime import datetime
 
 # Setup logging
