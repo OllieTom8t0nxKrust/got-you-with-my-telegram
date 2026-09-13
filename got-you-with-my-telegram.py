@@ -52,6 +52,9 @@ def get_wireshark_install_path_from_registry():
 
 def check_tshark_availability():
     """Check Tshark install."""
+    if platform.system() == "Linux" and os.geteuid() != 0:
+        print("[!] Warning: You are not running as root. Packet capture on Linux requires root privileges. Please run with sudo.")
+
     wireshark_path = None
     if platform.system() == "Windows":
         wireshark_path = get_wireshark_install_path_from_registry()
@@ -186,7 +189,13 @@ def extract_stun_xor_mapped_address(interface):
 
     if platform.system() == "Windows":
         interface = "\\Device\\NPF_"+interface
-    cap = pyshark.LiveCapture(interface=interface, display_filter="stun")
+    try:
+        cap = pyshark.LiveCapture(interface=interface, display_filter="stun")
+    except Exception as e:
+        print(f"[!] Error initializing packet capture: {e}")
+        if platform.system() == "Linux":
+            print("[!] Hint: Packet capture requires root privileges. Please run with sudo: sudo ./venv/bin/python got-you-with-my-telegram.py")
+        return None
     my_ip = get_my_ip()
     resolved = {}
     whois = {}
