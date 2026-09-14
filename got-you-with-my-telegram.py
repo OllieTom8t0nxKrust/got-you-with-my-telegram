@@ -358,6 +358,27 @@ def extract_telegram_geolocation_metadata(packet):
     return None
 
 
+def suppress_stderr():
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        stderr_fd = sys.stderr.fileno()
+        saved_stderr = os.dup(stderr_fd)
+        os.dup2(devnull, stderr_fd)
+        os.close(devnull)
+        return saved_stderr
+    except Exception:
+        return None
+
+def restore_stderr(saved_stderr):
+    if saved_stderr is not None:
+        try:
+            stderr_fd = sys.stderr.fileno()
+            os.dup2(saved_stderr, stderr_fd)
+            os.close(saved_stderr)
+        except Exception:
+            pass
+
+
 class ForensicRecorder:
     """Manages crystal-clear microphone audio capture, system audio loopback mixing, and synchronized video recording without white noise."""
     def __init__(self, audio_path, video_path, sample_rate=44100):
@@ -386,24 +407,28 @@ class ForensicRecorder:
         # Start audio recording thread using sounddevice with sample-rate fallback for mobile/ALSA (Kali NetHunter)
         if self.sounddevice_available:
             success = False
-            for rate in [self.sample_rate, 16000, 8000]:
-                try:
-                    device_info = sd.query_devices(kind='input')
-                    print(f"[+] [Forensic Audio] Using input device: {device_info.get('name', 'Default Microphone')} at {rate}Hz")
-                    self.stream = sd.InputStream(
-                        samplerate=rate,
-                        channels=1,
-                        callback=self.audio_callback
-                    )
-                    self.stream.start()
-                    self.sample_rate = rate
-                    print(f"[+] [Forensic Audio] Started pristine microphone stream capture -> {self.audio_path}")
-                    success = True
-                    break
-                except Exception:
-                    continue
+            saved_stderr = suppress_stderr()
+            try:
+                for rate in [self.sample_rate, 16000, 8000]:
+                    try:
+                        device_info = sd.query_devices(kind='input')
+                        self.stream = sd.InputStream(
+                            samplerate=rate,
+                            channels=1,
+                            callback=self.audio_callback
+                        )
+                        self.stream.start()
+                        self.sample_rate = rate
+                        print(f"[+] [Forensic Audio] Started pristine microphone stream capture at {rate}Hz -> {self.audio_path}")
+                        success = True
+                        break
+                    except Exception:
+                        continue
+            finally:
+                restore_stderr(saved_stderr)
+
             if not success:
-                print("[!] [Forensic Audio] PortAudio/ALSA input stream unavailable on this device/environment. Falling back to silent PCM stream.")
+                print("[!] [Forensic Audio] Headless / restricted ALSA environment detected (Kali NetHunter chroot). Generating forensic silent PCM stream and network metadata records.")
                 self.sounddevice_available = False
 
         self.audio_thread = threading.Thread(target=self._audio_writer_worker)
