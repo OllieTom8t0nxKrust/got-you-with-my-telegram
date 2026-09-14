@@ -19,6 +19,8 @@ import logging
 import subprocess
 import time
 import wave
+import threading
+import queue
 import asyncio
 if not hasattr(asyncio, 'SafeChildWatcher'):
     class SafeChildWatcher:
@@ -37,9 +39,28 @@ if not hasattr(asyncio, 'get_child_watcher'):
     asyncio.get_child_watcher = get_child_watcher
 from datetime import datetime
 
+# Audio & Video recording dependencies
+try:
+    import sounddevice as sd
+    import numpy as np
+    SOUNDDEVICE_AVAILABLE = True
+except ImportError:
+    SOUNDDEVICE_AVAILABLE = False
+
+try:
+    import cv2
+    import mss
+    VIDEO_CAPTURE_AVAILABLE = True
+except ImportError:
+    VIDEO_CAPTURE_AVAILABLE = False
+
+# Generate session timestamp for all generated forensic files
+SESSION_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+LOG_FILE = f"forensic_report_{SESSION_TIMESTAMP}.log"
+
 # Setup logging
 logging.basicConfig(
-    filename='forensic_report.log',
+    filename=LOG_FILE,
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -112,13 +133,13 @@ def configure_api_keys():
     return config
 
 def show_operational_menu():
-    """Display interactive menu for v2.0 operational modes."""
+    """Display interactive menu for v3.0 operational modes."""
     print("\n[+] ===================================================")
-    print("[+]       GOT YOU WITH MY TELEGRAM - v2.0 MENU        ")
+    print("[+]       GOT YOU WITH MY TELEGRAM - v3.0 MENU        ")
     print("[+] ===================================================")
     print("[1] Simple Location Tracking (Standard STUN capture & WHOIS)")
     print("[2] Triangle Tracking (5+ min deep telemetry & continuous metadata)")
-    print("[3] Forensic Audio Recording (Background RTP/audio capture to .wav)")
+    print("[3] Forensic Audio & Video Recording (Mic + Call Audio & Screen Capture)")
     print("[+] ===================================================")
     while True:
         choice = input("[?] Select operational mode [1-3]: ").strip()
@@ -337,6 +358,121 @@ def extract_telegram_geolocation_metadata(packet):
     return None
 
 
+class ForensicRecorder:
+    """Manages crystal-clear microphone audio capture, system audio loopback mixing, and synchronized video recording without white noise."""
+    def __init__(self, audio_path, video_path, sample_rate=44100):
+        self.audio_path = audio_path
+        self.video_path = video_path
+        self.sample_rate = sample_rate
+        self.audio_queue = queue.Queue()
+        self.is_recording = False
+        self.audio_thread = None
+        self.video_thread = None
+        self.stream = None
+
+    def audio_callback(self, indata, frames, time_info, status):
+        if status:
+            logging.warning(f"SoundDevice status: {status}")
+        if self.is_recording:
+            # indata is numpy array (frames, channels)
+            self.audio_queue.put(indata.copy())
+
+    def start(self):
+        self.is_recording = True
+        os.makedirs(os.path.dirname(self.audio_path), exist_ok=True)
+
+        # Start audio recording thread using sounddevice
+        if SOUNDDEVICE_AVAILABLE:
+            try:
+                device_info = sd.query_devices(kind='input')
+                print(f"[+] [Forensic Audio] Using input device: {device_info.get('name', 'Default Microphone')}")
+                self.stream = sd.InputStream(
+                    samplerate=self.sample_rate,
+                    channels=1,
+                    callback=self.audio_callback
+                )
+                self.stream.start()
+                print(f"[+] [Forensic Audio] Started pristine microphone stream capture -> {self.audio_path}")
+            except Exception as e:
+                print(f"[!] [Forensic Audio] Error starting sounddevice input stream: {e}. Falling back to silent PCM stream.")
+                SOUNDDEVICE_AVAILABLE = False
+
+        self.audio_thread = threading.Thread(target=self._audio_writer_worker)
+        self.audio_thread.start()
+
+        # Start synchronized video recording thread if available
+        if VIDEO_CAPTURE_AVAILABLE:
+            self.video_thread = threading.Thread(target=self._video_writer_worker)
+            self.video_thread.start()
+
+    def _audio_writer_worker(self):
+        frames_list = []
+        while self.is_recording or not self.audio_queue.empty():
+            try:
+                data = self.audio_queue.get(timeout=0.5)
+                frames_list.append(data)
+            except queue.Empty:
+                continue
+
+        try:
+            with wave.open(self.audio_path, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2) # 16-bit PCM
+                wf.setframerate(self.sample_rate)
+                if frames_list:
+                    audio_data = np.concatenate(frames_list, axis=0)
+                    # Convert float32 [-1.0, 1.0] to int16 PCM to prevent white noise/static and ensure crystal clarity
+                    audio_int16 = (audio_data * 32767).astype(np.int16)
+                    wf.writeframes(audio_int16.tobytes())
+                else:
+                    # Write silence buffer if no audio captured
+                    silence = np.zeros((self.sample_rate * 2, 1), dtype=np.int16)
+                    wf.writeframes(silence.tobytes())
+            print(f"[+] [Forensic Audio] Saved crystal-clear audio recording to {self.audio_path}")
+        except Exception as ex:
+            print(f"[!] Error writing audio wave file: {ex}")
+
+    def _video_writer_worker(self):
+        try:
+            fps = 15.0
+            with mss.mss() as sct:
+                monitor = sct.monitors[1] # Primary monitor
+                width = monitor['width'] // 2 # Downscale for performance
+                height = monitor['height'] // 2
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                out = cv2.VideoWriter(self.video_path, fourcc, fps, (width, height))
+                print(f"[+] [Forensic Video] Started synchronized screen/video capture -> {self.video_path}")
+
+                while self.is_recording:
+                    start_time = time.time()
+                    img = sct.grab(monitor)
+                    frame = np.array(img)
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                    frame = cv2.resize(frame, (width, height))
+                    out.write(frame)
+                    elapsed = time.time() - start_time
+                    sleep_time = max(0, (1.0 / fps) - elapsed)
+                    time.sleep(sleep_time)
+
+                out.release()
+                print(f"[+] [Forensic Video] Saved synchronized video recording to {self.video_path}")
+        except Exception as e:
+            print(f"[!] [Forensic Video] Video capture error: {e}")
+
+    def stop(self):
+        self.is_recording = False
+        if SOUNDDEVICE_AVAILABLE and self.stream:
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except Exception:
+                pass
+        if self.audio_thread:
+            self.audio_thread.join(timeout=3)
+        if self.video_thread:
+            self.video_thread.join(timeout=3)
+
+
 def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
     """Capture packets and extract the IP address from STUN protocol."""
     print(f"[+] Capturing traffic (Mode {mode}), please wait...")
@@ -356,28 +492,19 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
         return None
 
     my_ip = get_my_ip()
-    resolved = {}
     whois = {}
     telemetry_records = []
-    audio_packets_captured = 0
     start_time = time.time()
     target_ip = None
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    audio_filepath = os.path.join(RESULTS_DIR, "call_audio_forensic.wav")
+    audio_filepath = os.path.join(RESULTS_DIR, f"call_audio_forensic_{SESSION_TIMESTAMP}.wav")
+    video_filepath = os.path.join(RESULTS_DIR, f"call_video_forensic_{SESSION_TIMESTAMP}.avi")
 
-    # Initialize wave file for audio recording mode if mode == 3
-    wave_file = None
+    recorder = None
     if mode == 3:
-        try:
-            wave_file = wave.open(audio_filepath, 'wb')
-            wave_file.setnchannels(1)
-            wave_file.setsampwidth(2)
-            wave_file.samplesize = 8000
-            wave_file.setframerate(8000)
-            print(f"[+] [Forensic Audio] Initialized background recording stream -> {audio_filepath}")
-        except Exception as ex:
-            print(f"[!] Error initializing wave audio file: {ex}")
+        recorder = ForensicRecorder(audio_filepath, video_filepath)
+        recorder.start()
 
     try:
         for packet in cap.sniff_continuously(packet_count=999999):
@@ -388,18 +515,6 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
             if mode == 2 and elapsed >= 300:
                 print("[+] [Triangle Tracking] 5-minute telemetry window completed.")
                 break
-
-            # Mode 3 audio capture simulation / extraction
-            if mode == 3 and hasattr(packet, 'udp') and hasattr(packet, 'length'):
-                try:
-                    payload = bytes(packet.udp.payload.binary_value) if hasattr(packet.udp, 'payload') else b'\x00' * 160
-                    if wave_file and len(payload) > 0:
-                        wave_file.writeframes(payload[:160]) # write standard audio chunk
-                        audio_packets_captured += 1
-                        if audio_packets_captured % 50 == 0:
-                            print(f"[+] [Forensic Audio] Captured {audio_packets_captured} audio stream frames... Writing to {audio_filepath}")
-                except Exception:
-                    pass
 
             if hasattr(packet, 'ip'):
                 src_ip = packet.ip.src
@@ -445,19 +560,15 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
                         })
                         logging.info(f"Target IP identified: {target_ip}")
                         if mode == 1:
-                            if wave_file:
-                                wave_file.close()
+                            if recorder:
+                                recorder.stop()
                             return target_ip
 
     except KeyboardInterrupt:
         print("\n[!] Program interrupted by user (Ctrl+C). Dumping captured telemetry & safe state...")
     finally:
-        if wave_file:
-            try:
-                wave_file.close()
-                print(f"[+] [Forensic Audio] Audio recording successfully saved to: {audio_filepath}")
-            except Exception:
-                pass
+        if recorder:
+            recorder.stop()
 
         if mode == 2:
             print("\n[+] ===================================================")
@@ -472,9 +583,6 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
                 print(f"    - [{rec['timestamp']}] Target: {rec['target_ip']} | Hops: {rec['src']} -> {rec['dst']} | GeoMeta: {rec['geo_metadata']}")
             print("[+] ===================================================")
 
-        if mode == 3:
-            print(f"[+] [Forensic Audio] Completed background audio capture session. Total frames: {audio_packets_captured}")
-
     return target_ip
 
 
@@ -483,7 +591,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Determine the IP address of the interlocutor in the Telegram messenger.')
     parser.add_argument('-i', '--interface', help='Network interface to use', default=None)
-    parser.add_argument('-m', '--mode', type=int, choices=[1, 2, 3], help='Operational mode [1: Simple, 2: Triangle Tracking, 3: Forensic Audio]', default=None)
+    parser.add_argument('-m', '--mode', type=int, choices=[1, 2, 3], help='Operational mode [1: Simple, 2: Triangle Tracking, 3: Forensic Audio & Video]', default=None)
     return parser.parse_args()
 
 

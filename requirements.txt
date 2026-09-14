@@ -4,8 +4,12 @@ charset-normalizer==3.5.1
 idna==3.19
 lxml==6.1.2
 netifaces==0.11.0
+numpy==2.2.3
+opencv-python==4.11.0.86
+mss==10.0.0
 packaging==26.3
 pyshark==0.6
 requests==2.34.2
+sounddevice==0.5.1
 termcolor==3.3.0
 urllib3==2.7.0

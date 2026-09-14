@@ -1,4 +1,4 @@
-# Project Evolution Plan & Comprehensive .todo Specification: Got You With My Telegram (v2.0)
+# Project Evolution Plan & Comprehensive .todo Specification: Got You With My Telegram (v3.0)
 
 ## Completed Tasks (v2.0 Stable)
 - [x] Standardize script and project naming (`got-you-with-my-telegram.py`).
@@ -13,4 +13,10 @@
 - [x] **Interactive Startup Menu Options:** Implemented menu prompt system supporting [1] Simple Location Tracking, [2] Triangle Tracking (5+ min telemetry with Ctrl+C safe dump), and [3] Forensic Audio Recording (`.wav` audio stream capture in background).
 - [x] **TraceRoute & Network Hop Analysis:** Added real-time network hop visualization and traceroute diagnostics targeting the remote call answerer.
 - [x] **Strict Target Isolation:** Guaranteed that all recorded telemetry, geolocation results, audio captures, and traceroute outputs focus exclusively on the target call answerer and never leak data from the caller's host machine.
-- [x] **Unit Testing:** Created comprehensive test coverage for all new v2.0 features (`tests/test_got_you_with_my_telegram.py`).
+
+## v3.0 Forensic Enhancement & Audio/Video Roadmap (In Progress)
+- [x] Update `.todo` file with v3.0 roadmap and audio/video forensic enhancements.
+- [ ] Update `requirements.txt` with cross-platform audio/video dependencies (`sounddevice`, `numpy`, `opencv-python`, `mss`).
+- [ ] Enhance `got-you-with-my-telegram.py` with cross-platform microphone capture, system audio loopback/mixing (eliminating white noise), and synchronized video recording.
+- [ ] Update and expand unit test suite in `tests/test_got_you_with_my_telegram.py`.
+- [ ] Run `pytest` verification and check code quality.

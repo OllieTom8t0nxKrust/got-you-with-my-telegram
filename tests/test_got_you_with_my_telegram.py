@@ -3,6 +3,7 @@ import socket
 import os
 import sys
 import importlib.util
+import numpy as np
 from unittest.mock import patch, MagicMock
 
 # Load got-you-with-my-telegram.py dynamically because of hyphens in filename
@@ -48,10 +49,10 @@ class TestGotYouWithMyTelegram(unittest.TestCase):
         got_you_with_my_telegram.perform_traceroute("8.8.8.8")
         mock_popen.assert_called_once()
 
-    @patch('builtins.input', return_value='2')
+    @patch('builtins.input', return_value='3')
     def test_show_operational_menu(self, mock_input):
         mode = got_you_with_my_telegram.show_operational_menu()
-        self.assertEqual(mode, 2)
+        self.assertEqual(mode, 3)
 
     @patch('got_you_with_my_telegram.socket.gethostbyaddr')
     def test_get_hostname(self, mock_gethostbyaddr):
@@ -118,6 +119,22 @@ class TestGotYouWithMyTelegram(unittest.TestCase):
     def test_configure_api_keys_decline(self, mock_save, mock_load, mock_input):
         config = got_you_with_my_telegram.configure_api_keys()
         self.assertEqual(config['ip_api'], 'n')
+
+    def test_forensic_recorder_audio_queue(self):
+        audio_path = os.path.abspath("results/test_audio.wav")
+        video_path = os.path.abspath("results/test_video.avi")
+        recorder = got_you_with_my_telegram.ForensicRecorder(audio_path, video_path, sample_rate=8000)
+        
+        recorder.is_recording = True
+        dummy_data = np.zeros((100, 1), dtype=np.float32)
+        recorder.audio_callback(dummy_data, 100, None, None)
+        self.assertFalse(recorder.audio_queue.empty())
+
+        recorder.is_recording = False
+        recorder._audio_writer_worker()
+        self.assertTrue(os.path.isfile(audio_path))
+        if os.path.isfile(audio_path):
+            os.remove(audio_path)
 
 if __name__ == '__main__':
     unittest.main()
