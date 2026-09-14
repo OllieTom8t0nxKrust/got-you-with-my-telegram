@@ -383,29 +383,39 @@ class ForensicRecorder:
         self.is_recording = True
         os.makedirs(os.path.dirname(self.audio_path), exist_ok=True)
 
-        # Start audio recording thread using sounddevice
+        # Start audio recording thread using sounddevice with sample-rate fallback for mobile/ALSA (Kali NetHunter)
         if self.sounddevice_available:
-            try:
-                device_info = sd.query_devices(kind='input')
-                print(f"[+] [Forensic Audio] Using input device: {device_info.get('name', 'Default Microphone')}")
-                self.stream = sd.InputStream(
-                    samplerate=self.sample_rate,
-                    channels=1,
-                    callback=self.audio_callback
-                )
-                self.stream.start()
-                print(f"[+] [Forensic Audio] Started pristine microphone stream capture -> {self.audio_path}")
-            except Exception as e:
-                print(f"[!] [Forensic Audio] Error starting sounddevice input stream: {e}. Falling back to silent PCM stream.")
+            success = False
+            for rate in [self.sample_rate, 16000, 8000]:
+                try:
+                    device_info = sd.query_devices(kind='input')
+                    print(f"[+] [Forensic Audio] Using input device: {device_info.get('name', 'Default Microphone')} at {rate}Hz")
+                    self.stream = sd.InputStream(
+                        samplerate=rate,
+                        channels=1,
+                        callback=self.audio_callback
+                    )
+                    self.stream.start()
+                    self.sample_rate = rate
+                    print(f"[+] [Forensic Audio] Started pristine microphone stream capture -> {self.audio_path}")
+                    success = True
+                    break
+                except Exception:
+                    continue
+            if not success:
+                print("[!] [Forensic Audio] PortAudio/ALSA input stream unavailable on this device/environment. Falling back to silent PCM stream.")
                 self.sounddevice_available = False
 
         self.audio_thread = threading.Thread(target=self._audio_writer_worker)
         self.audio_thread.start()
 
-        # Start synchronized video recording thread if available
+        # Start synchronized video recording thread if available and display is set
         if self.video_capture_available:
-            self.video_thread = threading.Thread(target=self._video_writer_worker)
-            self.video_thread.start()
+            if platform.system() == 'Linux' and not os.environ.get('DISPLAY'):
+                print("[!] [Forensic Video] X11 Display not detected ($DISPLAY environment variable not set). Screen capture skipped in headless/NetHunter CLI mode.")
+            else:
+                self.video_thread = threading.Thread(target=self._video_writer_worker)
+                self.video_thread.start()
 
     def _audio_writer_worker(self):
         frames_list = []
