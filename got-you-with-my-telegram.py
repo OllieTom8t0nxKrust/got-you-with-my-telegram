@@ -54,9 +54,19 @@ try:
 except ImportError:
     VIDEO_CAPTURE_AVAILABLE = False
 
-# Generate session timestamp for all generated forensic files
+# Generate session timestamp and structured directories for execution artifacts
 SESSION_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
-LOG_FILE = f"forensic_report_{SESSION_TIMESTAMP}.log"
+RESULTS_DIR = 'results'
+SESSION_DIR = os.path.join(RESULTS_DIR, SESSION_TIMESTAMP)
+AUDIO_DIR = os.path.join(SESSION_DIR, 'audio')
+VIDEO_DIR = os.path.join(SESSION_DIR, 'video')
+LOGS_DIR = os.path.join(SESSION_DIR, 'logs')
+
+os.makedirs(AUDIO_DIR, exist_ok=True)
+os.makedirs(VIDEO_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+LOG_FILE = os.path.join(LOGS_DIR, f"forensic_report_{SESSION_TIMESTAMP}.log")
 
 # Setup logging
 logging.basicConfig(
@@ -534,9 +544,8 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
     start_time = time.time()
     target_ip = None
 
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    audio_filepath = os.path.join(RESULTS_DIR, f"call_audio_forensic_{SESSION_TIMESTAMP}.wav")
-    video_filepath = os.path.join(RESULTS_DIR, f"call_video_forensic_{SESSION_TIMESTAMP}.avi")
+    audio_filepath = os.path.join(AUDIO_DIR, f"call_audio_forensic_{SESSION_TIMESTAMP}.wav")
+    video_filepath = os.path.join(VIDEO_DIR, f"call_video_forensic_{SESSION_TIMESTAMP}.avi")
 
     recorder = None
     if mode == 3:
