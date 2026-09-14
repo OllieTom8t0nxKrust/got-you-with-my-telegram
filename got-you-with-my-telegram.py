@@ -524,9 +524,17 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
     """Capture packets and extract the IP address from STUN protocol."""
     print(f"[+] Capturing traffic (Mode {mode}), please wait...")
     try:
-        asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
     except RuntimeError:
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    def handle_asyncio_exception(l, context):
+        exc = context.get('exception')
+        if isinstance(exc, (EOFError, asyncio.CancelledError)):
+            return
+        l.default_exception_handler(context)
+    loop.set_exception_handler(handle_asyncio_exception)
 
     if platform.system() == "Windows":
         interface = "\\Device\\NPF_"+interface
@@ -610,23 +618,37 @@ def extract_stun_xor_mapped_address(interface, api_key='n', mode=1):
                                 recorder.stop()
                             return target_ip
 
-    except KeyboardInterrupt:
-        print("\n[!] Program interrupted by user (Ctrl+C). Dumping captured telemetry & safe state...")
+    except (KeyboardInterrupt, EOFError):
+        print("\n[+] Program interrupted by user (Ctrl+C). Safely finalizing and delivering all gathered forensic artifacts...")
     finally:
         if recorder:
             recorder.stop()
 
+        duration = int(time.time() - start_time)
         if mode == 2:
             print("\n[+] ===================================================")
             print("[+]       TRIANGLE TRACKING FORENSIC SUMMARY        ")
             print("[+] ===================================================")
-            print(f"[+] Total Duration Monitored: {int(time.time() - start_time)} seconds")
+            print(f"[+] Total Duration Monitored: {duration} seconds")
             print(f"[+] Total Telemetry Packets Logged: {len(telemetry_records)}")
             if target_ip:
                 print(f"[+] Target Interlocutor IP: {target_ip}")
             print("[+] Complete Telemetry Dump:")
             for rec in telemetry_records:
                 print(f"    - [{rec['timestamp']}] Target: {rec['target_ip']} | Hops: {rec['src']} -> {rec['dst']} | GeoMeta: {rec['geo_metadata']}")
+            print("[+] ===================================================")
+
+        if mode == 3:
+            print("\n[+] ===================================================")
+            print("[+]    FORENSIC AUDIO/VIDEO RECORDING SUMMARY       ")
+            print("[+] ===================================================")
+            print(f"[+] Total Duration Recorded: {duration} seconds")
+            print(f"[+] Audio File Saved: {audio_filepath}")
+            print(f"[+] Video File Saved: {video_filepath}")
+            print(f"[+] Forensic Logs:    {LOG_FILE}")
+            print(f"[+] Telemetry Records Captured: {len(telemetry_records)}")
+            if target_ip:
+                print(f"[+] Target Interlocutor IP: {target_ip}")
             print("[+] ===================================================")
 
     return target_ip
