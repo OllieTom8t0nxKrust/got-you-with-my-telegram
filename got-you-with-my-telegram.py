@@ -369,6 +369,8 @@ class ForensicRecorder:
         self.audio_thread = None
         self.video_thread = None
         self.stream = None
+        self.sounddevice_available = SOUNDDEVICE_AVAILABLE
+        self.video_capture_available = VIDEO_CAPTURE_AVAILABLE
 
     def audio_callback(self, indata, frames, time_info, status):
         if status:
@@ -382,7 +384,7 @@ class ForensicRecorder:
         os.makedirs(os.path.dirname(self.audio_path), exist_ok=True)
 
         # Start audio recording thread using sounddevice
-        if SOUNDDEVICE_AVAILABLE:
+        if self.sounddevice_available:
             try:
                 device_info = sd.query_devices(kind='input')
                 print(f"[+] [Forensic Audio] Using input device: {device_info.get('name', 'Default Microphone')}")
@@ -395,13 +397,13 @@ class ForensicRecorder:
                 print(f"[+] [Forensic Audio] Started pristine microphone stream capture -> {self.audio_path}")
             except Exception as e:
                 print(f"[!] [Forensic Audio] Error starting sounddevice input stream: {e}. Falling back to silent PCM stream.")
-                SOUNDDEVICE_AVAILABLE = False
+                self.sounddevice_available = False
 
         self.audio_thread = threading.Thread(target=self._audio_writer_worker)
         self.audio_thread.start()
 
         # Start synchronized video recording thread if available
-        if VIDEO_CAPTURE_AVAILABLE:
+        if self.video_capture_available:
             self.video_thread = threading.Thread(target=self._video_writer_worker)
             self.video_thread.start()
 
@@ -461,7 +463,7 @@ class ForensicRecorder:
 
     def stop(self):
         self.is_recording = False
-        if SOUNDDEVICE_AVAILABLE and self.stream:
+        if self.sounddevice_available and self.stream:
             try:
                 self.stream.stop()
                 self.stream.close()
