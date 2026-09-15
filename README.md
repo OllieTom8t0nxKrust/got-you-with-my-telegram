@@ -1,8 +1,9 @@
-# Got You With My Telegram
+# Got You With My Telegram (v3.1)
 
 A robust Python utility to determine the IP address of an interlocutor in Telegram messenger via STUN packet capture and network traffic analysis.
 
 ## Forensic Features
+- **v3.1 Mass Dependency Upgrades & Vulnerability Remediation:** Pinned all 15 Python modules in `requirements.txt` to their latest stable release versions (`numpy==2.5.3`, `requests==2.34.2`, `urllib3==2.7.0`, `pyshark==0.6`, etc.) with full compatibility adaptation for NumPy 2.x and modern APIs.
 - Automatic logging of captured peer IP addresses, timestamps, and WHOIS data to `forensic_report.log`.
 - Enhanced exception handling for network operations.
 - Improved Docker build stability.

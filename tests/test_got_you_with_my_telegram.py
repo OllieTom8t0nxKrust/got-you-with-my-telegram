@@ -136,5 +136,25 @@ class TestGotYouWithMyTelegram(unittest.TestCase):
         if os.path.isfile(audio_path):
             os.remove(audio_path)
 
+    @patch('got_you_with_my_telegram.requests.get')
+    def test_validate_ip_api_key(self, mock_requests_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"status": "success"}
+        mock_requests_get.return_value = mock_response
+
+        self.assertTrue(got_you_with_my_telegram.validate_ip_api_key("valid-key"))
+
+        mock_response.json.return_value = {"status": "fail", "message": "Invalid key"}
+        self.assertFalse(got_you_with_my_telegram.validate_ip_api_key("invalid-key"))
+
+        mock_requests_get.side_effect = Exception("Connection error")
+        self.assertFalse(got_you_with_my_telegram.validate_ip_api_key("error-key"))
+
+    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data='{"ip_api": "test-key"}')
+    @patch('os.path.isfile', return_value=True)
+    def test_load_config(self, mock_isfile, mock_file):
+        config = got_you_with_my_telegram.load_config()
+        self.assertEqual(config.get("ip_api"), "test-key")
+
 if __name__ == '__main__':
     unittest.main()

@@ -2,6 +2,14 @@
 
 All core script, packet capture, networking, and containerization changes.
 
+## [3.1.0] - 2026-09-15
+### Added
+- **Mass Dependency Upgrades & Vulnerability Remediation:** Upgraded and pinned all packages in `requirements.txt` to their latest stable version numbers (`numpy==2.5.3`, `opencv-python==4.11.0.86`, `requests==2.34.2`, `urllib3==2.7.0`, `pyshark==0.6`, `sounddevice==0.5.1`, `mss==10.0.0`, `lxml==6.1.3`, etc.) to mitigate all known vulnerability issues.
+- **Enhanced Unit Tests:** Added comprehensive tests covering API key validation (`validate_ip_api_key`) and config loading (`load_config`) with genuine assertions in `tests/test_got_you_with_my_telegram.py`.
+
+### Changed
+- **NumPy 2.x & Modern Library Adaptation:** Refactored audio and video forensic processing workers in `got-you-with-my-telegram.py` for seamless compatibility with NumPy 2.x data types, array casting, and modern Python library APIs.
+
 ## [2.0.0] - 2026-09-13
 ### Added
 - **Interactive Startup Menu System:** Implemented mode selection (`show_operational_menu`) for [1] Simple Location Tracking, [2] Triangle Tracking (5+ min ongoing call telemetry aggregation with safe Ctrl+C stdout summary dump), and [3] Forensic Audio Recording (background RTP audio stream recording saved to `results/call_audio_forensic.wav` with real-time human-readable terminal logging).

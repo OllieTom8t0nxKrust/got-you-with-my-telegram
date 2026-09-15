@@ -22,6 +22,7 @@ import wave
 import threading
 import queue
 import asyncio
+import numpy as np
 if not hasattr(asyncio, 'SafeChildWatcher'):
     class SafeChildWatcher:
         pass
@@ -143,9 +144,9 @@ def configure_api_keys():
     return config
 
 def show_operational_menu():
-    """Display interactive menu for v3.0 operational modes."""
+    """Display interactive menu for v3.1 operational modes."""
     print("\n[+] ===================================================")
-    print("[+]       GOT YOU WITH MY TELEGRAM - v3.0 MENU        ")
+    print("[+]       GOT YOU WITH MY TELEGRAM - v3.1 MENU        ")
     print("[+] ===================================================")
     print("[1] Simple Location Tracking (Standard STUN capture & WHOIS)")
     print("[2] Triangle Tracking (5+ min deep telemetry & continuous metadata)")

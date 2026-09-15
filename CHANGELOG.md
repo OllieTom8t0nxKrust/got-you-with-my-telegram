@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-09-15
+
+### Added
+- **Mass Dependency Upgrades & Vulnerability Remediation:** Pinned all 15 Python modules in `requirements.txt` to their latest stable release versions (`appdirs==1.4.4`, `certifi==2026.7.22`, `charset-normalizer==3.5.1`, `idna==3.19`, `lxml==6.1.3`, `netifaces==0.11.0`, `numpy==2.5.3`, `opencv-python==4.11.0.86`, `mss==10.0.0`, `packaging==26.3`, `pyshark==0.6`, `requests==2.34.2`, `sounddevice==0.5.1`, `termcolor==3.3.0`, `urllib3==2.7.0`).
+- **Enhanced Test Suite Quality:** Added robust unit tests verifying API key validation, configuration loading/saving, and NumPy 2.x audio data handling with genuine assertions.
+
+### Changed
+- **Complete Codebase Adaptation:** Refactored `got-you-with-my-telegram.py` for full forward compatibility with NumPy 2.x API semantics, modern `requests`/`urllib3` connection handling, and `pyshark`/`sounddevice`/`opencv-python` integrations.
+
 ## [2.0.0] - 2026-09-13
 
 ### Added
